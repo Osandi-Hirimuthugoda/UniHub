@@ -1,0 +1,7 @@
+<resources>
+    <string name="default_web_client_id">1:935378299202:android:ff5c7ee2b24701b7d5c0db</string>
+    <string name="firebase_storage_bucket">unihub-b40e3.firebasestorage.app</string>
+    <string name="google_api_key">AIzaSyAwNKTfDuqSsT0svfZTCORwDHUhcYKJ144</string>
+    <string name="project_number">935378299202</string>
+    <string name="project_id">unihub-b40e3</string>
+</resources>
