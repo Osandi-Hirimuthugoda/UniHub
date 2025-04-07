@@ -19,8 +19,9 @@ class _NewPostScreenState extends State<NewPostScreen> {
   String? _subcategory;
   final ImagePicker _picker = ImagePicker();
 
-  final List<String> categories = ['Marketplace', 'Event'];
+  final List<String> categories = ['General', 'Marketplace', 'Event'];
   final Map<String, List<String>> subcategories = {
+    'General': [],
     'Marketplace': [
       'Educational',
       'Accessories',
@@ -64,37 +65,10 @@ class _NewPostScreenState extends State<NewPostScreen> {
     }
   }
 
-  Future<String?> _getUserDocId(String authUid) async {
-    try {
-      DocumentSnapshot doc = await FirebaseFirestore.instance.collection('uid_to_user_doc').doc(authUid).get();
-      return doc.exists ? doc['userDocId'] as String : null;
-    } catch (e) {
-      print('Error fetching user document ID: $e');
-      return null;
-    }
-  }
-
-  Future<String> _createUserInFirestore(String username, String email) async {
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) throw Exception('User not logged in');
-
-    DocumentReference userDocRef = await FirebaseFirestore.instance.collection('users').add({
-      'uid': user.uid,
-      'username': username,
-      'email': email,
-      'profilePic': 'https://source.unsplash.com/50x50/?person',
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-
-    await FirebaseFirestore.instance.collection('uid_to_user_doc').doc(user.uid).set({'userDocId': userDocRef.id});
-
-    return userDocRef.id;
-  }
-
   Future<void> _uploadPost() async {
-    if (_image == null || _category == null || _subcategory == null) {
+    if (_image == null || _category == null || (_category != 'General' && _subcategory == null)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please select an image, category, and subcategory')),
+        SnackBar(content: Text('Please select an image, category, and subcategory (if applicable)')),
       );
       return;
     }
@@ -106,15 +80,19 @@ class _NewPostScreenState extends State<NewPostScreen> {
       User? user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception('User not logged in');
 
-      String? userDocId = await _getUserDocId(user.uid);
-      userDocId ??= await _createUserInFirestore(user.displayName ?? 'Anonymous', user.email ?? '');
+      String userDocId = user.uid;
+
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(userDocId).get();
+      if (!userDoc.exists) {
+        throw Exception('User document not found. Please register again.');
+      }
 
       await FirebaseFirestore.instance.collection('posts').add({
         'userId': userDocId,
         'imagePath': imagePath,
         'caption': _captionController.text,
         'category': _category,
-        'subcategory': _subcategory,
+        'subcategory': _category == 'General' ? null : _subcategory,
         'timestamp': FieldValue.serverTimestamp(),
         'likesCount': 0,
         'likedBy': [],
@@ -136,14 +114,18 @@ class _NewPostScreenState extends State<NewPostScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.black,
-        leading: IconButton(icon: Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-        title: Text('New Post', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text('Create New Post', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -153,62 +135,135 @@ class _NewPostScreenState extends State<NewPostScreen> {
                 width: double.infinity,
                 height: 200,
                 decoration: BoxDecoration(
-                  color: Colors.grey[800],
-                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.grey[200],
+                  border: Border.all(color: Colors.grey[400]!, width: 1),
+                  borderRadius: BorderRadius.circular(12),
                   image: _image != null ? DecorationImage(image: FileImage(_image!), fit: BoxFit.cover) : null,
                 ),
-                child: _image == null ? Center(child: Icon(Icons.add_a_photo, color: Colors.white)) : null,
+                child: _image == null
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo, color: Colors.grey[600], size: 40),
+                            SizedBox(height: 8),
+                            Text('Add Image', style: TextStyle(color: Colors.grey[600], fontSize: 16)),
+                          ],
+                        ),
+                      )
+                    : null,
               ),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 24),
+            Text(
+              'Caption',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+            SizedBox(height: 8),
             TextField(
               controller: _captionController,
-              style: TextStyle(color: Colors.white),
+              style: TextStyle(color: Colors.black),
               decoration: InputDecoration(
                 hintText: 'Add a caption...',
                 hintStyle: TextStyle(color: Colors.grey),
-                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
+              maxLines: 3,
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 24),
+            Text(
+              'Category',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+            ),
+            SizedBox(height: 8),
             DropdownButtonFormField<String>(
               value: _category,
-              hint: Text('Select Category', style: TextStyle(color: Colors.white)),
-              dropdownColor: Colors.black,
-              items: categories.map((category) => DropdownMenuItem(value: category, child: Text(category, style: TextStyle(color: Colors.white)))).toList(),
+              hint: Text('Select Category', style: TextStyle(color: Colors.grey)),
+              isExpanded: true,
+              decoration: InputDecoration(
+                filled: true,
+                fillColor: Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              items: categories.map((category) {
+                return DropdownMenuItem(
+                  value: category,
+                  child: Text(category, style: TextStyle(color: Colors.black)),
+                );
+              }).toList(),
               onChanged: (value) => setState(() {
                 _category = value;
                 _subcategory = null;
               }),
-              decoration: InputDecoration(
-                border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-              ),
             ),
-            SizedBox(height: 16),
-            if (_category != null)
-              DropdownButtonFormField<String>(
-                value: _subcategory,
-                hint: Text('Select Subcategory', style: TextStyle(color: Colors.white)),
-                dropdownColor: Colors.black,
-                items: subcategories[_category!]!.map((subcategory) => DropdownMenuItem(value: subcategory, child: Text(subcategory, style: TextStyle(color: Colors.white)))).toList(),
-                onChanged: (value) => setState(() => _subcategory = value),
-                decoration: InputDecoration(
-                  border: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
-                ),
+            SizedBox(height: 24),
+            if (_category != null && _category != 'General')
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Subcategory',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                  ),
+                  SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    value: _subcategory,
+                    hint: Text('Select Subcategory', style: TextStyle(color: Colors.grey)),
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    items: subcategories[_category!]!.map((subcategory) {
+                      return DropdownMenuItem(
+                        value: subcategory,
+                        child: Text(subcategory, style: TextStyle(color: Colors.black)),
+                      );
+                    }).toList(),
+                    onChanged: (value) => setState(() => _subcategory = value),
+                  ),
+                  SizedBox(height: 24),
+                ],
               ),
-            SizedBox(height: 16),
-            Center(
-              child: ElevatedButton(
-                onPressed: _uploadPost,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                  padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/home');
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey[300],
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                  ),
+                  child: Text('Cancel', style: TextStyle(color: Colors.black, fontSize: 16)),
                 ),
-                child: Text('Post', style: TextStyle(color: Colors.white)),
-              ),
+                ElevatedButton(
+                  onPressed: _uploadPost,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: EdgeInsets.symmetric(horizontal: 40, vertical: 12),
+                  ),
+                  child: Text('Post', style: TextStyle(color: Colors.white, fontSize: 16)),
+                ),
+              ],
             ),
           ],
         ),

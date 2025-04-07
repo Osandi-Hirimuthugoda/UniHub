@@ -65,10 +65,7 @@ class _HomeScreenState extends State<HomeScreen> {
               return Center(child: Text('No posts available. Add a new post!'));
             }
 
-            final posts = snapshot.data!.docs.map((doc) {
-              print('Fetched post: ${doc.data()}');
-              return Post.fromDocument(doc);
-            }).toList();
+            final posts = snapshot.data!.docs.map((doc) => Post.fromDocument(doc)).toList();
 
             return SingleChildScrollView(
               child: Column(
@@ -170,14 +167,10 @@ class Post {
     final data = doc.data() as Map<String, dynamic>? ?? {};
 
     var likesCountValue = data['likesCount'] ?? 0;
-    int likesCount = likesCountValue is int
-        ? likesCountValue
-        : int.tryParse(likesCountValue.toString()) ?? 0;
+    int likesCount = likesCountValue is int ? likesCountValue : int.tryParse(likesCountValue.toString()) ?? 0;
 
     var commentsCountValue = data['commentsCount'] ?? 0;
-    int commentsCount = commentsCountValue is int
-        ? commentsCountValue
-        : int.tryParse(commentsCountValue.toString()) ?? 0;
+    int commentsCount = commentsCountValue is int ? commentsCountValue : int.tryParse(commentsCountValue.toString()) ?? 0;
 
     String userId = data['userId'] ?? '';
     print('Post ${doc.id} userId: $userId');
@@ -387,11 +380,11 @@ class _PostWidgetState extends State<PostWidget> {
 
             return ListTile(
               leading: CircleAvatar(
-                backgroundImage: profilePic.startsWith('http')
-                    ? NetworkImage(profilePic)
-                    : FileImage(File(profilePic)) as ImageProvider,
+                backgroundImage: profilePic.isNotEmpty && !profilePic.startsWith('http') && File(profilePic).existsSync()
+                    ? FileImage(File(profilePic))
+                    : NetworkImage(profilePic.isNotEmpty ? profilePic : 'https://via.placeholder.com/50') as ImageProvider,
                 onBackgroundImageError: (exception, stackTrace) {
-                  print('Error loading profile picture: $exception');
+                  print('Error loading profile picture for userId ${widget.post.userId}: $exception');
                 },
                 backgroundColor: Colors.grey,
               ),
@@ -437,6 +430,11 @@ class _PostWidgetState extends State<PostWidget> {
                   }
                   Navigator.pushNamed(context, '/chatofauthor', arguments: widget.post.userId);
                 },
+              ),
+              Expanded(child: SizedBox()),
+              IconButton(
+                onPressed: () {},
+                icon: Icon(Icons.save),
               ),
             ],
           ),
