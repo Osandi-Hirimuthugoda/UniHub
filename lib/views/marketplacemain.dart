@@ -11,7 +11,46 @@ class MarketplaceApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: MarketplaceScreen(),
+      home: MarketplaceHome(), // Use MarketplaceHome instead of MarketplaceScreen
+    );
+  }
+}
+
+class MarketplaceHome extends StatelessWidget {
+  const MarketplaceHome({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: MarketplaceScreen(),
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.white,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(
+              icon: Icon(Icons.home, color: Colors.black),
+              onPressed: () => Navigator.pushNamed(context, '/home'),
+            ),
+            IconButton(
+              icon: Icon(Icons.event_available, color: Colors.black),
+              onPressed: () => Navigator.pushNamed(context, '/eventcategory'),
+            ),
+            IconButton(
+              icon: Icon(Icons.add_box_outlined, color: Colors.black),
+              onPressed: () => Navigator.pushNamed(context, '/addposts'),
+            ),
+            IconButton(
+              icon: Icon(Icons.storefront, color: Colors.black),
+              onPressed: () => Navigator.pushNamed(context, '/marketplace'),
+            ),
+            IconButton(
+              icon: Icon(Icons.person_outline, color: Colors.black),
+              onPressed: () => Navigator.pushNamed(context, '/profile'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -43,132 +82,130 @@ class _MarketplaceScreenState extends State<MarketplaceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 50),
-              child: Center(
-                child: Text(
-                  "MARKETPLACE",
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-
-            // Happening Today Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 50),
+            child: Center(
               child: Text(
-                "HAPPENING TODAY",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                "MARKETPLACE",
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
             ),
-            const SizedBox(height: 10),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('posts')
-                  .where('category', isEqualTo: 'Marketplace')
-                  .orderBy('timestamp', descending: true)
-                  .limit(3)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(child: Text('No marketplace items available today. Add a new item!'));
-                }
-                return SizedBox(
-                  height: 160,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      var post = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-                      return _buildSaleCard(
-                        post['caption'] ?? 'Untitled Item',
-                        post['imagePath'] ?? '',
-                        post['userId'] ?? 'unknown',
-                      );
-                    },
+          ),
+
+          // Happening Today Section
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "HAPPENING TODAY",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+          const SizedBox(height: 10),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('posts')
+                .where('category', isEqualTo: 'Marketplace')
+                .orderBy('timestamp', descending: true)
+                .limit(3)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Center(child: CircularProgressIndicator());
+              }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return Center(child: Text('No marketplace items available today. Add a new item!'));
+              }
+              return SizedBox(
+                height: 160,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: snapshot.data!.docs.length,
+                  itemBuilder: (context, index) {
+                    var post = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+                    return _buildSaleCard(
+                      post['caption'] ?? 'Untitled Item',
+                      post['imagePath'] ?? '',
+                      post['userId'] ?? 'unknown',
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+
+          // Categories Section
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Text(
+              "CATEGORIES",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+          ),
+
+          // Grid View for Categories
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 1.8,
+              ),
+              itemCount: 6,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CategoryPostsScreen(category: categories[index]),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    alignment: Alignment.centerLeft,
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      gradient: const LinearGradient(
+                        colors: [Colors.purple, Color.fromARGB(255, 238, 103, 148)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(9.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(categoryIcons[index], size: 32, color: Colors.white),
+                          Text(
+                            categories[index],
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },
             ),
-            const SizedBox(height: 20),
-
-            // Categories Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "CATEGORIES",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-            ),
-
-            // Grid View for Categories
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 1.8,
-                ),
-                itemCount: 6,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CategoryPostsScreen(category: categories[index]),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        gradient: const LinearGradient(
-                          colors: [Colors.purple, Color.fromARGB(255, 238, 103, 148)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(9.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(categoryIcons[index], size: 32, color: Colors.white),
-                            Text(
-                              categories[index],
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
