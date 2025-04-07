@@ -9,7 +9,49 @@ class EventsApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(debugShowCheckedModeBanner: false, home: EventsScreen());
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: EventsHome(), // Use EventsHome instead of EventsScreen
+    );
+  }
+}
+
+class EventsHome extends StatelessWidget {
+  const EventsHome({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: EventsScreen(),
+      bottomNavigationBar: BottomAppBar(
+        color: Colors.white,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            IconButton(
+              icon: Icon(Icons.home, color: Colors.black),
+              onPressed: () => Navigator.pushNamed(context, '/home'),
+            ),
+            IconButton(
+              icon: Icon(Icons.event_available, color: Colors.black),
+              onPressed: () => Navigator.pushNamed(context, '/eventcategory'),
+            ),
+            IconButton(
+              icon: Icon(Icons.add_box_outlined, color: Colors.black),
+              onPressed: () => Navigator.pushNamed(context, '/addposts'),
+            ),
+            IconButton(
+              icon: Icon(Icons.storefront, color: Colors.black),
+              onPressed: () => Navigator.pushNamed(context, '/marketplace'),
+            ),
+            IconButton(
+              icon: Icon(Icons.person_outline, color: Colors.black),
+              onPressed: () => Navigator.pushNamed(context, '/profile'),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -41,92 +83,90 @@ class _EventsScreenState extends State<EventsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: 50),
-              child: Center(child: Text("EVENTS", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold))),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text("HAPPENING TODAY", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-            SizedBox(height: 10),
-            StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance
-                  .collection('posts')
-                  .where('category', isEqualTo: 'Event')
-                  .orderBy('timestamp', descending: true)
-                  .limit(3)
-                  .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return Center(child: Text('No events happening today. Add a new event!'));
-                return SizedBox(
-                  height: 160,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      var post = snapshot.data!.docs[index].data() as Map<String, dynamic>;
-                      return _buildEventCard(
-                        post['caption'] ?? 'Untitled Event',
-                        post['imagePath'] ?? '',
-                        post['userId'] ?? 'unknown',
-                      );
-                    },
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: 50),
+            child: Center(child: Text("EVENTS", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold))),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text("HAPPENING TODAY", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+          SizedBox(height: 10),
+          StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('posts')
+                .where('category', isEqualTo: 'Event')
+                .orderBy('timestamp', descending: true)
+                .limit(3)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) return Center(child: CircularProgressIndicator());
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return Center(child: Text('No events happening today. Add a new event!'));
+              return SizedBox(
+                height: 160,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: snapshot.data!.docs.length,
+                  itemBuilder: (context, index) {
+                    var post = snapshot.data!.docs[index].data() as Map<String, dynamic>;
+                    return _buildEventCard(
+                      post['caption'] ?? 'Untitled Event',
+                      post['imagePath'] ?? '',
+                      post['userId'] ?? 'unknown',
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+          SizedBox(height: 20),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16),
+            child: Text("EVENT CATEGORIES", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            child: GridView.builder(
+              shrinkWrap: true,
+              physics: NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 1.8,
+              ),
+              itemCount: 6,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EventCategoryPostsScreen(category: categories[index]))),
+                  child: Container(
+                    alignment: Alignment.centerLeft,
+                    padding: EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(colors: [Colors.blue, Color.fromARGB(255, 103, 147, 238)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.all(9.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(categoryIcons[index], size: 32, color: Colors.white),
+                          Text(categories[index], style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               },
             ),
-            SizedBox(height: 20),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16),
-              child: Text("EVENT CATEGORIES", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 1.8,
-                ),
-                itemCount: 6,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => EventCategoryPostsScreen(category: categories[index]))),
-                    child: Container(
-                      alignment: Alignment.centerLeft,
-                      padding: EdgeInsets.symmetric(horizontal: 10),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        gradient: LinearGradient(colors: [Colors.blue, Color.fromARGB(255, 103, 147, 238)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(9.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Icon(categoryIcons[index], size: 32, color: Colors.white),
-                            Text(categories[index], style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
